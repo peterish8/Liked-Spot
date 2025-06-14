@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Music, Search, Filter, Plus, LogOut, Headphones } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Track {
   id: string;
@@ -37,6 +38,8 @@ export default function DashboardPage() {
   const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
+  const [showLoadingModal, setShowLoadingModal] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("spotify_access_token");
@@ -138,9 +141,17 @@ export default function DashboardPage() {
     if (!playlistName.trim() || selectedTracks.size === 0) return;
 
     setIsCreatingPlaylist(true);
+    setShowLoadingModal(true);
+    setLoadingMessage("Extracting song URIs...");
+
     const token = localStorage.getItem("spotify_access_token");
 
     try {
+      const selectedTrackUris = tracks
+        .filter((track) => selectedTracks.has(track.id))
+        .map((track) => track.uri);
+
+      setLoadingMessage("Creating playlist...");
       const createResponse = await fetch(
         `https://api.spotify.com/v1/users/${user?.id}/playlists`,
         {
@@ -159,10 +170,7 @@ export default function DashboardPage() {
 
       if (createResponse.ok) {
         const playlist = await createResponse.json();
-
-        const selectedTrackUris = tracks
-          .filter((track) => selectedTracks.has(track.id))
-          .map((track) => track.uri);
+        setLoadingMessage("Adding songs to playlist...");
 
         for (let i = 0; i < selectedTrackUris.length; i += 100) {
           const batch = selectedTrackUris.slice(i, i + 100);
@@ -179,15 +187,22 @@ export default function DashboardPage() {
           );
         }
 
-        alert(
-          `Playlist "${playlistName}" created successfully with ${selectedTracks.size} songs!`
-        );
-        setPlaylistName("");
-        setSelectedTracks(new Set());
+        setLoadingMessage("Playlist created successfully!");
+        setTimeout(() => {
+          setPlaylistName("");
+          setSelectedTracks(new Set());
+          setShowLoadingModal(false);
+        }, 2000); // Show success message for 2 seconds
+      } else {
+        const errorData = await createResponse.json();
+        throw new Error(errorData.error.message || "Failed to create playlist");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating playlist:", error);
-      alert("Failed to create playlist. Please try again.");
+      setLoadingMessage(
+        `Error: ${error.message || "Failed to create playlist."}`
+      );
+      setTimeout(() => setShowLoadingModal(false), 3000); // Show error for 3 seconds
     } finally {
       setIsCreatingPlaylist(false);
     }
@@ -316,16 +331,13 @@ export default function DashboardPage() {
             </Button>
             {selectedTracks.size > 0 && (
               <Button
-                onClick={() => {
-                  if (!playlistName.trim()) {
-                    setPlaylistName(
-                      `My Playlist (${selectedTracks.size} songs)`
-                    );
-                  }
-                  createPlaylist();
-                }}
-                disabled={isCreatingPlaylist}
-                className="backdrop-blur-lg bg-gradient-to-r from-purple-900 via-purple-700 to-purple-500 text-white font-extrabold px-7 py-3 rounded-full shadow-xl hover:from-purple-700 hover:to-purple-400 transition-all text-lg tracking-wide w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => createPlaylist()}
+                disabled={!playlistName.trim() || isCreatingPlaylist}
+                className={`px-7 py-3 rounded-full shadow-xl transition-all text-lg tracking-wide w-full sm:w-auto ${
+                  !playlistName.trim()
+                    ? "bg-gray-800 text-gray-400 border-2 border-purple-500 hover:border-purple-600"
+                    : "bg-gradient-to-r from-purple-900 via-purple-700 to-purple-500 text-white hover:from-purple-700 hover:to-purple-400"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isCreatingPlaylist ? (
                   <>
@@ -347,7 +359,7 @@ export default function DashboardPage() {
           <div className="mb-6">
             <Input
               className="w-full bg-black/40 text-white placeholder:text-white/60 border border-white/20 rounded-full px-6 py-4 focus:ring-2 focus:ring-[#1DB954] focus:border-[#1DB954] transition-all text-lg"
-              placeholder={`Enter playlist name (default: My Playlist (${selectedTracks.size} songs))`}
+              placeholder="Enter playlist name"
               value={playlistName}
               onChange={(e) => setPlaylistName(e.target.value)}
             />
@@ -358,9 +370,9 @@ export default function DashboardPage() {
           {filteredTracks.map((track) => (
             <Card
               key={track.id}
-              className={`bg-gray-900 hover:bg-gray-800 transition-colors cursor-pointer ${
+              className={`bg-gray-900 hover:bg-gray-800 transition-colors cursor-pointer rounded-xl ${
                 selectedTracks.has(track.id)
-                  ? "bg-[#1DB954]/40 border-transparent"
+                  ? "bg-[#1DB954] border-transparent"
                   : "border-gray-800"
               }`}
               onClick={() => toggleTrackSelection(track.id)}
@@ -372,7 +384,7 @@ export default function DashboardPage() {
                     alt={track.name}
                     width={40}
                     height={40}
-                    className="rounded-md object-cover"
+                    className="rounded-lg object-cover"
                   />
                 )}
                 <div className="flex-1 min-w-0">
@@ -399,6 +411,17 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* Loading Modal */}
+      <Dialog open={showLoadingModal} onOpenChange={setShowLoadingModal}>
+        <DialogContent className="max-w-xs w-full bg-black/80 border border-white/20 backdrop-blur-lg rounded-2xl p-6 text-center">
+          <DialogTitle className="text-white text-xl mb-4">
+            Creating Your Playlist
+          </DialogTitle>
+          <div className="w-8 h-8 border-4 border-[#1DB954] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg text-[#b3b3b3]">{loadingMessage}</p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
