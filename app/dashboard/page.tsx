@@ -272,54 +272,6 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  // Fetch audio features for all visible tracks if not already fetched
-  const fetchAudioFeatures = async (trackIds: string[]) => {
-    const idsToFetch = trackIds.filter((id) => !audioFeatures[id]);
-    if (idsToFetch.length === 0) return;
-    const token = localStorage.getItem("spotify_access_token");
-    const response = await fetch(
-      `https://api.spotify.com/v1/audio-features?ids=${idsToFetch.join(",")}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (response.ok) {
-      const data = await response.json();
-      const newFeatures = { ...audioFeatures };
-      data.audio_features.forEach((f: any) => {
-        if (f) newFeatures[f.id] = f;
-      });
-      setAudioFeatures(newFeatures);
-    }
-  };
-
-  // Mood filter logic
-  useEffect(() => {
-    if (!selectedMood) return setFilteredTracks(tracks);
-    const mood = MOODS.find((m) => m.key === selectedMood);
-    if (!mood) return setFilteredTracks(tracks);
-    const ids = tracks.map((t) => t.id);
-    fetchAudioFeatures(ids).then(() => {
-      setFilteredTracks(
-        tracks.filter((track) => {
-          const f = audioFeatures[track.id];
-          if (!f) return false;
-          let match = true;
-          if (mood.valence !== undefined)
-            match = match && Math.abs(f.valence - mood.valence) < 0.25;
-          if (mood.energy !== undefined)
-            match = match && Math.abs(f.energy - mood.energy) < 0.25;
-          if (mood.danceability !== undefined)
-            match =
-              match && Math.abs(f.danceability - mood.danceability) < 0.25;
-          if (mood.acousticness !== undefined)
-            match = match && f.acousticness > mood.acousticness;
-          if (mood.instrumentalness !== undefined)
-            match = match && f.instrumentalness > mood.instrumentalness;
-          return match;
-        })
-      );
-    });
-  }, [selectedMood, tracks]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
@@ -409,6 +361,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
         <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
           <div className="flex-1 w-full">
             <div className="relative">
@@ -421,22 +374,22 @@ export default function DashboardPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 pointer-events-none" />
             </div>
           </div>
-          <div className="flex gap-4 mt-4 md:mt-0">
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4 sm:mt-0">
             <Button
               onClick={selectAllFiltered}
-              className="backdrop-blur-lg bg-[#1a1a1a] border border-[#333] text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-[#1DB954]/20 transition-all text-sm"
+              className="backdrop-blur-lg bg-gradient-to-r from-green-400 via-green-500 to-green-600 text-white font-extrabold px-7 py-4 rounded-2xl shadow-2xl border-2 border-white/30 hover:scale-110 hover:from-green-500 hover:to-green-700 active:scale-95 transition-all duration-200 text-lg tracking-wide animate-pulse"
             >
-              <Plus className="mr-2 h-4 w-4" /> Select All
+              <Plus className="mr-2 h-5 w-5 animate-bounce" /> Select All
             </Button>
             <Button
               onClick={clearSelection}
-              className="backdrop-blur-lg bg-[#1a1a1a] border border-[#333] text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-[#333] transition-all text-sm"
+              className="backdrop-blur-lg bg-gradient-to-r from-pink-400 via-red-400 to-red-600 text-white font-extrabold px-7 py-4 rounded-2xl shadow-2xl border-2 border-white/30 hover:scale-110 hover:from-pink-500 hover:to-red-700 active:scale-95 transition-all duration-200 text-lg tracking-wide animate-pulse"
             >
-              Clear Selection
+              <Filter className="mr-2 h-5 w-5 animate-spin" /> Clear Selection
             </Button>
             <Button
-              onClick={() => setShowFilters(true)}
-              className="backdrop-blur-lg bg-black/40 border border-white/20 text-cyan-400 font-extrabold px-7 py-3 rounded-full shadow-xl hover:bg-cyan-600/20 hover:text-white transition-all text-lg tracking-wide"
+              onClick={() => setShowFilters((v) => !v)}
+              className="backdrop-blur-lg bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-600 text-white font-extrabold px-7 py-4 rounded-2xl shadow-2xl border-2 border-white/30 hover:scale-110 hover:from-blue-500 hover:to-cyan-700 active:scale-95 transition-all duration-200 text-lg tracking-wide animate-pulse"
             >
               <Filter className="mr-2 h-5 w-5" /> Filters
             </Button>
@@ -447,10 +400,8 @@ export default function DashboardPage() {
           {filteredTracks.map((track) => (
             <Card
               key={track.id}
-              className={`backdrop-blur-lg bg-black/40 border border-white/20 shadow-lg rounded-2xl hover:bg-white/10 transition-colors cursor-pointer w-full overflow-x-hidden flex items-center ${
-                selectedTracks.has(track.id)
-                  ? "ring-2 ring-[#1DB954] bg-[#1DB954]/30"
-                  : ""
+              className={`bg-gray-900 border-gray-800 hover:bg-gray-800 transition-colors cursor-pointer ${
+                selectedTracks.has(track.id) ? "ring-2 ring-[#1DB954]" : ""
               }`}
               onClick={() => toggleTrackSelection(track.id)}
             >
