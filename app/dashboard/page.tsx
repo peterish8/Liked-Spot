@@ -391,10 +391,10 @@ export default function DashboardPage() {
           {filteredTracks.map((track) => (
             <Card
               key={track.id}
-              className={`bg-gray-900 hover:bg-gray-800 transition-colors cursor-pointer rounded-xl overflow-hidden ${
+              className={`transition-colors cursor-pointer rounded-xl overflow-hidden ${
                 selectedTracks.has(track.id)
-                  ? "bg-[#1DB954]/40 border-transparent"
-                  : "border-gray-800"
+                  ? "bg-[#1DB954]/40 border-transparent hover:bg-[#1DB954]/50"
+                  : "bg-gray-900 border-gray-800 hover:bg-gray-800"
               }`}
               onClick={() => toggleTrackSelection(track.id)}
             >
