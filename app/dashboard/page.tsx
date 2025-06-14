@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Music, Search, Filter, Plus, LogOut, Headphones } from "lucide-react";
+import {
+  Music,
+  Search,
+  Filter,
+  Plus,
+  LogOut,
+  Headphones,
+  CheckCircle,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +48,8 @@ export default function DashboardPage() {
   const [playlistName, setPlaylistName] = useState("");
   const [showLoadingModal, setShowLoadingModal] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [playlistUrl, setPlaylistUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("spotify_access_token");
@@ -119,13 +129,15 @@ export default function DashboardPage() {
   };
 
   const toggleTrackSelection = (trackId: string) => {
-    const newSelected = new Set(selectedTracks);
-    if (newSelected.has(trackId)) {
-      newSelected.delete(trackId);
-    } else {
-      newSelected.add(trackId);
-    }
-    setSelectedTracks(newSelected);
+    setSelectedTracks((prevSelected) => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(trackId)) {
+        newSelected.delete(trackId);
+      } else {
+        newSelected.add(trackId);
+      }
+      return newSelected;
+    });
   };
 
   const selectAllFiltered = () => {
@@ -142,6 +154,8 @@ export default function DashboardPage() {
 
     setIsCreatingPlaylist(true);
     setShowLoadingModal(true);
+    setLoadingProgress(0);
+    setPlaylistUrl(null);
     setLoadingMessage("Extracting song URIs...");
 
     const token = localStorage.getItem("spotify_access_token");
@@ -150,6 +164,7 @@ export default function DashboardPage() {
       const selectedTrackUris = tracks
         .filter((track) => selectedTracks.has(track.id))
         .map((track) => track.uri);
+      setLoadingProgress(25);
 
       setLoadingMessage("Creating playlist...");
       const createResponse = await fetch(
@@ -167,11 +182,14 @@ export default function DashboardPage() {
           }),
         }
       );
+      setLoadingProgress(50);
 
       if (createResponse.ok) {
         const playlist = await createResponse.json();
+        setPlaylistUrl(playlist.external_urls.spotify);
         setLoadingMessage("Adding songs to playlist...");
 
+        const totalBatches = Math.ceil(selectedTrackUris.length / 100);
         for (let i = 0; i < selectedTrackUris.length; i += 100) {
           const batch = selectedTrackUris.slice(i, i + 100);
           await fetch(
@@ -185,24 +203,27 @@ export default function DashboardPage() {
               body: JSON.stringify({ uris: batch }),
             }
           );
+          setLoadingProgress(50 + (50 * (i / 100 + 1)) / totalBatches); // Progress from 50% to 100%
         }
 
+        setLoadingProgress(100);
         setLoadingMessage("Playlist created successfully!");
         setTimeout(() => {
           setPlaylistName("");
           setSelectedTracks(new Set());
           setShowLoadingModal(false);
-        }, 2000); // Show success message for 2 seconds
+        }, 3000); // Show success message for 3 seconds, then close
       } else {
         const errorData = await createResponse.json();
         throw new Error(errorData.error.message || "Failed to create playlist");
       }
     } catch (error: any) {
       console.error("Error creating playlist:", error);
+      setLoadingProgress(0);
       setLoadingMessage(
         `Error: ${error.message || "Failed to create playlist."}`
       );
-      setTimeout(() => setShowLoadingModal(false), 3000); // Show error for 3 seconds
+      setTimeout(() => setShowLoadingModal(false), 4000); // Show error for 4 seconds
     } finally {
       setIsCreatingPlaylist(false);
     }
@@ -416,10 +437,43 @@ export default function DashboardPage() {
       <Dialog open={showLoadingModal} onOpenChange={setShowLoadingModal}>
         <DialogContent className="max-w-xs w-full bg-black/80 border border-white/20 backdrop-blur-lg rounded-2xl p-6 text-center">
           <DialogTitle className="text-white text-xl mb-4">
-            Creating Your Playlist
+            {loadingProgress === 100
+              ? "Playlist Created!"
+              : "Creating Your Playlist"}
           </DialogTitle>
-          <div className="w-8 h-8 border-4 border-[#1DB954] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg text-[#b3b3b3]">{loadingMessage}</p>
+          {loadingProgress < 100 && !playlistUrl ? (
+            <>
+              <div className="w-8 h-8 border-4 border-[#1DB954] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-lg text-[#b3b3b3] mb-4">{loadingMessage}</p>
+              <div className="w-full bg-gray-700 rounded-full h-2.5 dark:bg-gray-700">
+                <div
+                  className="bg-[#1DB954] h-2.5 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${loadingProgress}%` }}
+                ></div>
+              </div>
+            </>
+          ) : (
+            <>
+              {loadingProgress === 100 && playlistUrl ? (
+                <>
+                  <CheckCircle className="h-12 w-12 text-[#1DB954] mx-auto mb-4" />
+                  <p className="text-lg text-[#b3b3b3] mb-4">
+                    {loadingMessage}
+                  </p>
+                  <a
+                    href={playlistUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-[#1DB954] text-black font-semibold hover:bg-[#1ed760] transition-colors shadow-lg"
+                  >
+                    Go to Spotify
+                  </a>
+                </>
+              ) : (
+                <p className="text-lg text-[#b3b3b3]">{loadingMessage}</p> // For error messages
+              )}
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
