@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Music, Search, Filter, Plus, LogOut, Headphones } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Track {
   id: string;
@@ -28,75 +27,6 @@ interface User {
   images: { url: string }[];
 }
 
-const MOODS = [
-  {
-    key: "dance",
-    label: "Dance",
-    valence: 0.6,
-    energy: 0.6,
-    danceability: 0.7,
-  },
-  {
-    key: "romantic",
-    label: "Romantic",
-    valence: 0.4,
-    energy: 0.3,
-    danceability: 0.5,
-  },
-  { key: "sad", label: "Sad", valence: 0.2, energy: 0.2, danceability: 0.3 },
-  {
-    key: "chill",
-    label: "Sleep / Chill",
-    valence: 0.3,
-    energy: 0.2,
-    danceability: 0.5,
-    acousticness: 0.5,
-  },
-  {
-    key: "happy",
-    label: "Happy",
-    valence: 0.7,
-    energy: 0.5,
-    danceability: 0.6,
-  },
-  {
-    key: "motivational",
-    label: "Motivational",
-    valence: 0.7,
-    energy: 0.7,
-    danceability: 0.5,
-  },
-  {
-    key: "melancholic",
-    label: "Melancholic",
-    valence: 0.3,
-    energy: 0.5,
-    danceability: 0.3,
-  },
-  {
-    key: "angry",
-    label: "Angry",
-    valence: 0.2,
-    energy: 0.7,
-    danceability: 0.5,
-  },
-  {
-    key: "spiritual",
-    label: "Spiritual",
-    valence: 0.5,
-    energy: 0.3,
-    danceability: 0.3,
-    instrumentalness: 0.5,
-  },
-  {
-    key: "dark",
-    label: "Dark / Mysterious",
-    valence: 0.2,
-    energy: 0.5,
-    danceability: 0.3,
-  },
-];
-
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -107,10 +37,6 @@ export default function DashboardPage() {
   const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
-  const [pendingMoods, setPendingMoods] = useState<string[]>([]);
-  const [audioFeatures, setAudioFeatures] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const token = localStorage.getItem("spotify_access_token");
@@ -273,70 +199,6 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  const fetchAudioFeatures = async (trackIds: string[]) => {
-    const token = localStorage.getItem("spotify_access_token");
-    if (!token) return;
-
-    try {
-      const features: Record<string, any> = {};
-
-      // Spotify API allows max 100 tracks per request
-      for (let i = 0; i < trackIds.length; i += 100) {
-        const batch = trackIds.slice(i, i + 100);
-        const response = await fetch(
-          `https://api.spotify.com/v1/audio-features?ids=${batch.join(",")}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          data.audio_features.forEach((feature: any) => {
-            if (feature) {
-              features[feature.id] = feature;
-            }
-          });
-        }
-      }
-
-      setAudioFeatures(features);
-    } catch (error) {
-      console.error("Error fetching audio features:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (!selectedMoods.length) return setFilteredTracks(tracks);
-    const ids = tracks.map((t) => t.id);
-    (async () => {
-      await fetchAudioFeatures(ids);
-      setFilteredTracks(
-        tracks.filter((track) => {
-          const f = audioFeatures[track.id];
-          if (!f) return false;
-          return selectedMoods.some((moodKey) => {
-            const mood = MOODS.find((m) => m.key === moodKey);
-            if (!mood) return false;
-            let match = true;
-            if (mood.valence !== undefined)
-              match = match && Math.abs(f.valence - mood.valence) < 0.25;
-            if (mood.energy !== undefined)
-              match = match && Math.abs(f.energy - mood.energy) < 0.25;
-            if (mood.danceability !== undefined)
-              match =
-                match && Math.abs(f.danceability - mood.danceability) < 0.25;
-            if (mood.acousticness !== undefined)
-              match = match && f.acousticness > mood.acousticness;
-            if (mood.instrumentalness !== undefined)
-              match = match && f.instrumentalness > mood.instrumentalness;
-            return match;
-          });
-        })
-      );
-    })();
-  }, [selectedMoods, tracks, audioFeatures]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
@@ -452,17 +314,45 @@ export default function DashboardPage() {
             >
               <Filter className="mr-2 h-5 w-5" /> Clear Selection
             </Button>
-            <Button
-              onClick={() => {
-                setPendingMoods(selectedMoods);
-                setShowFilters(true);
-              }}
-              className="backdrop-blur-lg bg-gradient-to-r from-blue-900 via-cyan-700 to-cyan-500 text-white font-extrabold px-7 py-3 rounded-full shadow-xl hover:from-cyan-700 hover:to-cyan-400 transition-all text-lg tracking-wide w-full sm:w-auto"
-            >
-              <Filter className="mr-2 h-5 w-5" /> Filters
-            </Button>
+            {selectedTracks.size > 0 && (
+              <Button
+                onClick={() => {
+                  if (!playlistName.trim()) {
+                    setPlaylistName(
+                      `My Playlist (${selectedTracks.size} songs)`
+                    );
+                  }
+                  createPlaylist();
+                }}
+                disabled={isCreatingPlaylist}
+                className="backdrop-blur-lg bg-gradient-to-r from-purple-900 via-purple-700 to-purple-500 text-white font-extrabold px-7 py-3 rounded-full shadow-xl hover:from-purple-700 hover:to-purple-400 transition-all text-lg tracking-wide w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCreatingPlaylist ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-5 w-5" />
+                    Create Playlist
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
+        {/* Playlist Name Input */}
+        {selectedTracks.size > 0 && (
+          <div className="mb-6">
+            <Input
+              className="w-full bg-black/40 text-white placeholder:text-white/60 border border-white/20 rounded-full px-6 py-4 focus:ring-2 focus:ring-[#1DB954] focus:border-[#1DB954] transition-all text-lg"
+              placeholder={`Enter playlist name (default: My Playlist (${selectedTracks.size} songs))`}
+              value={playlistName}
+              onChange={(e) => setPlaylistName(e.target.value)}
+            />
+          </div>
+        )}
         {/* Song List */}
         <div className="grid gap-2 w-full overflow-x-hidden">
           {filteredTracks.map((track) => (
@@ -508,89 +398,7 @@ export default function DashboardPage() {
             </p>
           </div>
         )}
-
-        {/* Create Playlist Section */}
-        {selectedTracks.size > 0 && (
-          <div className="mt-8 p-6 backdrop-blur-lg bg-[#1a1a1a] border border-[#333] rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold text-white mb-4">
-              Create Playlist from {selectedTracks.size} Selected Songs
-            </h3>
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
-              <Input
-                className="flex-1 bg-black/40 text-white placeholder:text-white/60 border border-white/20 rounded-full px-6 py-3 focus:ring-2 focus:ring-[#1DB954] focus:border-[#1DB954] transition-all"
-                placeholder="Enter playlist name..."
-                value={playlistName}
-                onChange={(e) => setPlaylistName(e.target.value)}
-              />
-              <Button
-                onClick={createPlaylist}
-                disabled={!playlistName.trim() || isCreatingPlaylist}
-                className="backdrop-blur-lg bg-gradient-to-r from-green-900 via-green-700 to-green-500 text-white font-extrabold px-8 py-3 rounded-full shadow-xl hover:from-green-700 hover:to-green-400 transition-all text-lg tracking-wide disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-              >
-                {isCreatingPlaylist ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-5 w-5" />
-                    Create Playlist
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
       </main>
-      {/* Filters Modal */}
-      <Dialog open={showFilters} onOpenChange={setShowFilters}>
-        <DialogContent className="max-w-md w-full bg-black/80 border border-white/20 backdrop-blur-lg rounded-2xl">
-          <DialogTitle className="text-white text-2xl mb-4">
-            Filter by Mood
-          </DialogTitle>
-          <div className="grid grid-cols-2 gap-4">
-            {MOODS.map((mood) => (
-              <Button
-                key={mood.key}
-                onClick={() => {
-                  setPendingMoods((prev) =>
-                    prev.includes(mood.key)
-                      ? prev.filter((k) => k !== mood.key)
-                      : [...prev, mood.key]
-                  );
-                }}
-                className={`rounded-full px-4 py-2 font-bold border-2 ${
-                  pendingMoods.includes(mood.key)
-                    ? "bg-[#1DB954] text-black border-[#1DB954]"
-                    : "bg-white/10 text-white border-white/20"
-                }`}
-              >
-                {mood.label}
-              </Button>
-            ))}
-          </div>
-          <Button
-            onClick={() => {
-              setSelectedMoods(pendingMoods);
-              setShowFilters(false);
-            }}
-            className="mt-6 w-full rounded-full bg-gradient-to-r from-green-900 via-green-700 to-green-500 text-white font-bold"
-          >
-            Apply
-          </Button>
-          <Button
-            onClick={() => {
-              setPendingMoods([]);
-              setSelectedMoods([]);
-              setShowFilters(false);
-            }}
-            className="mt-2 w-full rounded-full bg-white/10 text-white font-bold"
-          >
-            Clear Filter
-          </Button>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
