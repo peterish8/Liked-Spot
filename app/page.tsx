@@ -123,7 +123,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-gray-800 py-8">
         <div className="container mx-auto px-4 text-center text-gray-400">
-          <p>&copy; 2024 Liked Spot. Built with ❤️ for music lovers.</p>
+          <p>&copy; 2025 Liked Spot. Built with ❤️ for music lovers.</p>
           <p className="mt-2 text-sm">Not affiliated with Spotify AB.</p>
           <p className="mt-2 text-sm">Created by~ Prathick </p>
         </div>
