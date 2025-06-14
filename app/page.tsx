@@ -59,7 +59,7 @@ export default function HomePage() {
               <Filter className="h-12 w-12 text-[#1DB954] mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-3 text-white">Advanced Filtering</h3>
               <p className="text-gray-400">
-                Filter by artist, date, mood, energy, and more. Create playlists that match your exact vibe.
+                Filter and create playlists that match your exact vibe.
               </p>
             </CardContent>
           </Card>
@@ -125,6 +125,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4 text-center text-gray-400">
           <p>&copy; 2024 Liked Spot. Built with ❤️ for music lovers.</p>
           <p className="mt-2 text-sm">Not affiliated with Spotify AB.</p>
+          <p className="mt-2 text-sm">Created by~ Prathick .</p>
         </div>
       </footer>
     </div>
