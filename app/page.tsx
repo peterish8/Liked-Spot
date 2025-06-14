@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Music, Search, Filter, Plus, LogOut, Headphones } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface Track {
   id: string;
@@ -214,7 +215,42 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#191414] via-[#232526] to-[#1DB954] text-white">
+    <div className="min-h-screen relative flex flex-col bg-transparent text-white">
+      <div className="fixed inset-0 -z-10">
+        <svg
+          className="w-full h-full"
+          viewBox="0 0 800 800"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <radialGradient id="neon1" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#1DB954" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#191414" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="neon2" cx="80%" cy="20%" r="60%">
+              <stop offset="0%" stopColor="#ff0057" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#191414" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx="400" cy="400" r="350" fill="url(#neon1)">
+            <animate
+              attributeName="r"
+              values="350;370;350"
+              dur="6s"
+              repeatCount="indefinite"
+            />
+          </circle>
+          <circle cx="650" cy="150" r="200" fill="url(#neon2)">
+            <animate
+              attributeName="r"
+              values="200;220;200"
+              dur="8s"
+              repeatCount="indefinite"
+            />
+          </circle>
+        </svg>
+      </div>
       <header className="flex items-center justify-between px-8 py-6 border-b border-white/10 backdrop-blur-md bg-white/5">
         <div className="flex items-center space-x-3">
           <Music className="h-8 w-8 text-[#1DB954] drop-shadow-lg" />
@@ -222,17 +258,11 @@ export default function DashboardPage() {
             Liked Spot
           </span>
         </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-white/80 font-semibold text-lg">
-            {user?.display_name}
-          </span>
-          <Button
-            onClick={handleLogout}
-            className="bg-white/20 hover:bg-white/30 text-[#1DB954] font-bold px-4 py-2 rounded-xl shadow-lg backdrop-blur-md border border-white/20 transition-all"
-          >
-            <LogOut className="mr-2 h-5 w-5" /> Logout
+        <Link href="/auth">
+          <Button className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold px-6 py-3 rounded-xl shadow-lg transition-all">
+            Connect Spotify
           </Button>
-        </div>
+        </Link>
       </header>
 
       <main className="container mx-auto px-4 py-10">
