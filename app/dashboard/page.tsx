@@ -108,7 +108,8 @@ export default function DashboardPage() {
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [pendingMoods, setPendingMoods] = useState<string[]>([]);
   const [audioFeatures, setAudioFeatures] = useState<Record<string, any>>({});
 
   useEffect(() => {
@@ -272,6 +273,70 @@ export default function DashboardPage() {
     router.push("/");
   };
 
+  const fetchAudioFeatures = async (trackIds: string[]) => {
+    const token = localStorage.getItem("spotify_access_token");
+    if (!token) return;
+
+    try {
+      const features: Record<string, any> = {};
+
+      // Spotify API allows max 100 tracks per request
+      for (let i = 0; i < trackIds.length; i += 100) {
+        const batch = trackIds.slice(i, i + 100);
+        const response = await fetch(
+          `https://api.spotify.com/v1/audio-features?ids=${batch.join(",")}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          data.audio_features.forEach((feature: any) => {
+            if (feature) {
+              features[feature.id] = feature;
+            }
+          });
+        }
+      }
+
+      setAudioFeatures(features);
+    } catch (error) {
+      console.error("Error fetching audio features:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedMoods.length) return setFilteredTracks(tracks);
+    const ids = tracks.map((t) => t.id);
+    (async () => {
+      await fetchAudioFeatures(ids);
+      setFilteredTracks(
+        tracks.filter((track) => {
+          const f = audioFeatures[track.id];
+          if (!f) return false;
+          return selectedMoods.some((moodKey) => {
+            const mood = MOODS.find((m) => m.key === moodKey);
+            if (!mood) return false;
+            let match = true;
+            if (mood.valence !== undefined)
+              match = match && Math.abs(f.valence - mood.valence) < 0.25;
+            if (mood.energy !== undefined)
+              match = match && Math.abs(f.energy - mood.energy) < 0.25;
+            if (mood.danceability !== undefined)
+              match =
+                match && Math.abs(f.danceability - mood.danceability) < 0.25;
+            if (mood.acousticness !== undefined)
+              match = match && f.acousticness > mood.acousticness;
+            if (mood.instrumentalness !== undefined)
+              match = match && f.instrumentalness > mood.instrumentalness;
+            return match;
+          });
+        })
+      );
+    })();
+  }, [selectedMoods, tracks, audioFeatures]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
@@ -362,7 +427,7 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-center gap-4 mb-8 w-full">
           <div className="flex-1 w-full">
             <div className="relative">
               <Input
@@ -377,19 +442,22 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4 sm:mt-0">
             <Button
               onClick={selectAllFiltered}
-              className="backdrop-blur-lg bg-gradient-to-r from-green-400 via-green-500 to-green-600 text-white font-extrabold px-7 py-4 rounded-2xl shadow-2xl border-2 border-white/30 hover:scale-110 hover:from-green-500 hover:to-green-700 active:scale-95 transition-all duration-200 text-lg tracking-wide animate-pulse"
+              className="backdrop-blur-lg bg-gradient-to-r from-green-900 via-green-700 to-green-500 text-white font-extrabold px-7 py-3 rounded-full shadow-xl hover:from-green-700 hover:to-green-400 transition-all text-lg tracking-wide w-full sm:w-auto"
             >
-              <Plus className="mr-2 h-5 w-5 animate-bounce" /> Select All
+              <Plus className="mr-2 h-5 w-5" /> Select All
             </Button>
             <Button
               onClick={clearSelection}
-              className="backdrop-blur-lg bg-gradient-to-r from-pink-400 via-red-400 to-red-600 text-white font-extrabold px-7 py-4 rounded-2xl shadow-2xl border-2 border-white/30 hover:scale-110 hover:from-pink-500 hover:to-red-700 active:scale-95 transition-all duration-200 text-lg tracking-wide animate-pulse"
+              className="backdrop-blur-lg bg-gradient-to-r from-red-900 via-pink-700 to-pink-500 text-white font-extrabold px-7 py-3 rounded-full shadow-xl hover:from-pink-700 hover:to-pink-400 transition-all text-lg tracking-wide w-full sm:w-auto"
             >
-              <Filter className="mr-2 h-5 w-5 animate-spin" /> Clear Selection
+              <Filter className="mr-2 h-5 w-5" /> Clear Selection
             </Button>
             <Button
-              onClick={() => setShowFilters((v) => !v)}
-              className="backdrop-blur-lg bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-600 text-white font-extrabold px-7 py-4 rounded-2xl shadow-2xl border-2 border-white/30 hover:scale-110 hover:from-blue-500 hover:to-cyan-700 active:scale-95 transition-all duration-200 text-lg tracking-wide animate-pulse"
+              onClick={() => {
+                setPendingMoods(selectedMoods);
+                setShowFilters(true);
+              }}
+              className="backdrop-blur-lg bg-gradient-to-r from-blue-900 via-cyan-700 to-cyan-500 text-white font-extrabold px-7 py-3 rounded-full shadow-xl hover:from-cyan-700 hover:to-cyan-400 transition-all text-lg tracking-wide w-full sm:w-auto"
             >
               <Filter className="mr-2 h-5 w-5" /> Filters
             </Button>
@@ -400,8 +468,10 @@ export default function DashboardPage() {
           {filteredTracks.map((track) => (
             <Card
               key={track.id}
-              className={`bg-gray-900 border-gray-800 hover:bg-gray-800 transition-colors cursor-pointer ${
-                selectedTracks.has(track.id) ? "ring-2 ring-[#1DB954]" : ""
+              className={`bg-gray-900 hover:bg-gray-800 transition-colors cursor-pointer ${
+                selectedTracks.has(track.id)
+                  ? "bg-[#1DB954]/40 border-transparent"
+                  : "border-gray-800"
               }`}
               onClick={() => toggleTrackSelection(track.id)}
             >
@@ -438,6 +508,40 @@ export default function DashboardPage() {
             </p>
           </div>
         )}
+
+        {/* Create Playlist Section */}
+        {selectedTracks.size > 0 && (
+          <div className="mt-8 p-6 backdrop-blur-lg bg-[#1a1a1a] border border-[#333] rounded-2xl shadow-xl">
+            <h3 className="text-xl font-bold text-white mb-4">
+              Create Playlist from {selectedTracks.size} Selected Songs
+            </h3>
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <Input
+                className="flex-1 bg-black/40 text-white placeholder:text-white/60 border border-white/20 rounded-full px-6 py-3 focus:ring-2 focus:ring-[#1DB954] focus:border-[#1DB954] transition-all"
+                placeholder="Enter playlist name..."
+                value={playlistName}
+                onChange={(e) => setPlaylistName(e.target.value)}
+              />
+              <Button
+                onClick={createPlaylist}
+                disabled={!playlistName.trim() || isCreatingPlaylist}
+                className="backdrop-blur-lg bg-gradient-to-r from-green-900 via-green-700 to-green-500 text-white font-extrabold px-8 py-3 rounded-full shadow-xl hover:from-green-700 hover:to-green-400 transition-all text-lg tracking-wide disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+              >
+                {isCreatingPlaylist ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-5 w-5" />
+                    Create Playlist
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </main>
       {/* Filters Modal */}
       <Dialog open={showFilters} onOpenChange={setShowFilters}>
@@ -450,13 +554,16 @@ export default function DashboardPage() {
               <Button
                 key={mood.key}
                 onClick={() => {
-                  setSelectedMood(mood.key);
-                  setShowFilters(false);
+                  setPendingMoods((prev) =>
+                    prev.includes(mood.key)
+                      ? prev.filter((k) => k !== mood.key)
+                      : [...prev, mood.key]
+                  );
                 }}
-                className={`rounded-full px-4 py-2 font-bold ${
-                  selectedMood === mood.key
-                    ? "bg-[#1DB954] text-black"
-                    : "bg-white/10 text-white"
+                className={`rounded-full px-4 py-2 font-bold border-2 ${
+                  pendingMoods.includes(mood.key)
+                    ? "bg-[#1DB954] text-black border-[#1DB954]"
+                    : "bg-white/10 text-white border-white/20"
                 }`}
               >
                 {mood.label}
@@ -465,10 +572,20 @@ export default function DashboardPage() {
           </div>
           <Button
             onClick={() => {
-              setSelectedMood(null);
+              setSelectedMoods(pendingMoods);
               setShowFilters(false);
             }}
-            className="mt-6 w-full rounded-full bg-white/10 text-white font-bold"
+            className="mt-6 w-full rounded-full bg-gradient-to-r from-green-900 via-green-700 to-green-500 text-white font-bold"
+          >
+            Apply
+          </Button>
+          <Button
+            onClick={() => {
+              setPendingMoods([]);
+              setSelectedMoods([]);
+              setShowFilters(false);
+            }}
+            className="mt-2 w-full rounded-full bg-white/10 text-white font-bold"
           >
             Clear Filter
           </Button>
