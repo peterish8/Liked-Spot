@@ -264,7 +264,7 @@ export default function DashboardPage() {
           </div>
         )}
       </header>
-      <main className="container mx-auto px-2 sm:px-4 py-10 w-full overflow-x-hidden">
+      <main className="container mx-auto px-2 sm:px-4 py-10 w-full">
         <div className="flex flex-row gap-4 mb-8">
           <Card className="flex-1 backdrop-blur-lg bg-[#1a1a1a] border border-[#333] shadow-xl rounded-2xl">
             <CardHeader className="pb-2">
@@ -366,18 +366,18 @@ export default function DashboardPage() {
           </div>
         )}
         {/* Song List */}
-        <div className="grid gap-2 w-full overflow-x-hidden">
+        <div className="grid gap-2 w-full rounded-xl">
           {filteredTracks.map((track) => (
             <Card
               key={track.id}
-              className={`bg-gray-900 hover:bg-gray-800 transition-colors cursor-pointer rounded-xl ${
+              className={`bg-gray-900 hover:bg-gray-800 transition-colors cursor-pointer rounded-xl overflow-hidden ${
                 selectedTracks.has(track.id)
-                  ? "bg-[#1DB954] border-transparent"
+                  ? "bg-[#1DB954]/40 border-transparent"
                   : "border-gray-800"
               }`}
               onClick={() => toggleTrackSelection(track.id)}
             >
-              <CardContent className="flex items-center gap-4 p-3 w-full">
+              <CardContent className="flex items-center gap-4 p-3 w-full rounded-xl overflow-hidden">
                 {track.album.images[0]?.url && (
                   <Image
                     src={track.album.images[0].url}
