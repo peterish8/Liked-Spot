@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Music, Search, Filter, Plus, LogOut, Headphones } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Track {
   id: string;
@@ -27,6 +28,75 @@ interface User {
   images: { url: string }[];
 }
 
+const MOODS = [
+  {
+    key: "dance",
+    label: "Dance",
+    valence: 0.6,
+    energy: 0.6,
+    danceability: 0.7,
+  },
+  {
+    key: "romantic",
+    label: "Romantic",
+    valence: 0.4,
+    energy: 0.3,
+    danceability: 0.5,
+  },
+  { key: "sad", label: "Sad", valence: 0.2, energy: 0.2, danceability: 0.3 },
+  {
+    key: "chill",
+    label: "Sleep / Chill",
+    valence: 0.3,
+    energy: 0.2,
+    danceability: 0.5,
+    acousticness: 0.5,
+  },
+  {
+    key: "happy",
+    label: "Happy",
+    valence: 0.7,
+    energy: 0.5,
+    danceability: 0.6,
+  },
+  {
+    key: "motivational",
+    label: "Motivational",
+    valence: 0.7,
+    energy: 0.7,
+    danceability: 0.5,
+  },
+  {
+    key: "melancholic",
+    label: "Melancholic",
+    valence: 0.3,
+    energy: 0.5,
+    danceability: 0.3,
+  },
+  {
+    key: "angry",
+    label: "Angry",
+    valence: 0.2,
+    energy: 0.7,
+    danceability: 0.5,
+  },
+  {
+    key: "spiritual",
+    label: "Spiritual",
+    valence: 0.5,
+    energy: 0.3,
+    danceability: 0.3,
+    instrumentalness: 0.5,
+  },
+  {
+    key: "dark",
+    label: "Dark / Mysterious",
+    valence: 0.2,
+    energy: 0.5,
+    danceability: 0.3,
+  },
+];
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -38,6 +108,8 @@ export default function DashboardPage() {
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [playlistName, setPlaylistName] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [audioFeatures, setAudioFeatures] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const token = localStorage.getItem("spotify_access_token");
@@ -200,6 +272,54 @@ export default function DashboardPage() {
     router.push("/");
   };
 
+  // Fetch audio features for all visible tracks if not already fetched
+  const fetchAudioFeatures = async (trackIds: string[]) => {
+    const idsToFetch = trackIds.filter((id) => !audioFeatures[id]);
+    if (idsToFetch.length === 0) return;
+    const token = localStorage.getItem("spotify_access_token");
+    const response = await fetch(
+      `https://api.spotify.com/v1/audio-features?ids=${idsToFetch.join(",")}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      const newFeatures = { ...audioFeatures };
+      data.audio_features.forEach((f: any) => {
+        if (f) newFeatures[f.id] = f;
+      });
+      setAudioFeatures(newFeatures);
+    }
+  };
+
+  // Mood filter logic
+  useEffect(() => {
+    if (!selectedMood) return setFilteredTracks(tracks);
+    const mood = MOODS.find((m) => m.key === selectedMood);
+    if (!mood) return setFilteredTracks(tracks);
+    const ids = tracks.map((t) => t.id);
+    fetchAudioFeatures(ids).then(() => {
+      setFilteredTracks(
+        tracks.filter((track) => {
+          const f = audioFeatures[track.id];
+          if (!f) return false;
+          let match = true;
+          if (mood.valence !== undefined)
+            match = match && Math.abs(f.valence - mood.valence) < 0.25;
+          if (mood.energy !== undefined)
+            match = match && Math.abs(f.energy - mood.energy) < 0.25;
+          if (mood.danceability !== undefined)
+            match =
+              match && Math.abs(f.danceability - mood.danceability) < 0.25;
+          if (mood.acousticness !== undefined)
+            match = match && f.acousticness > mood.acousticness;
+          if (mood.instrumentalness !== undefined)
+            match = match && f.instrumentalness > mood.instrumentalness;
+          return match;
+        })
+      );
+    });
+  }, [selectedMood, tracks]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
@@ -214,7 +334,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen relative flex flex-col bg-[#121212] text-white overflow-x-hidden">
       {/* Header with Spotify Logo */}
-      <header className="flex items-center justify-between px-4 sm:px-8 py-6 border-b border-[#333] backdrop-blur-md bg-[#1a1a1a]">
+      <header className="flex items-center justify-between px-4 sm:px-8 py-6 border-b border-white/10 backdrop-blur-md bg-white/5">
         <div className="flex items-center space-x-3">
           <svg
             className="h-8 w-8 text-[#1DB954] drop-shadow-lg"
@@ -228,15 +348,27 @@ export default function DashboardPage() {
               fill="currentColor"
             />
           </svg>
-          <span className="text-3xl font-extrabold tracking-tight text-white">
+          <span className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#1DB954] to-[#1ed760]">
             Liked Spot
           </span>
         </div>
-        <Link href="/auth">
-          <Button className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold px-6 py-3 rounded-full shadow-lg transition-all">
-            Connect Spotify
-          </Button>
-        </Link>
+        {user && user.images[0]?.url && (
+          <div className="flex items-center gap-3">
+            <Image
+              src={user.images[0].url}
+              alt={user.display_name}
+              width={40}
+              height={40}
+              className="rounded-full border-2 border-[#1DB954]"
+            />
+            <Button
+              onClick={handleLogout}
+              className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold px-4 py-2 rounded-full shadow-lg transition-all"
+            >
+              Logout
+            </Button>
+          </div>
+        )}
       </header>
       <main className="container mx-auto px-2 sm:px-4 py-10 w-full overflow-x-hidden">
         <div className="flex flex-row gap-4 mb-8">
@@ -281,12 +413,12 @@ export default function DashboardPage() {
           <div className="flex-1 w-full">
             <div className="relative">
               <Input
-                className="w-full px-6 py-3 rounded-lg bg-[#1a1a1a] text-white placeholder:text-[#b3b3b3] border border-[#333] shadow-lg backdrop-blur-md focus:ring-2 focus:ring-[#1DB954] focus:border-[#1DB954] transition-all"
+                className="w-full pl-12 pr-6 py-4 rounded-full bg-black/40 text-white placeholder:text-white/60 border border-white/20 shadow-lg backdrop-blur-md focus:ring-2 focus:ring-[#1DB954] focus:border-[#1DB954] transition-all"
                 placeholder="Search songs, artists, or albums..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b3b3b3]" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 pointer-events-none" />
             </div>
           </div>
           <div className="flex gap-4 mt-4 md:mt-0">
@@ -303,10 +435,10 @@ export default function DashboardPage() {
               Clear Selection
             </Button>
             <Button
-              onClick={() => setShowFilters((v) => !v)}
-              className="backdrop-blur-lg bg-[#1a1a1a] border border-[#333] text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-[#333] transition-all text-sm"
+              onClick={() => setShowFilters(true)}
+              className="backdrop-blur-lg bg-black/40 border border-white/20 text-cyan-400 font-extrabold px-7 py-3 rounded-full shadow-xl hover:bg-cyan-600/20 hover:text-white transition-all text-lg tracking-wide"
             >
-              Filters
+              <Filter className="mr-2 h-5 w-5" /> Filters
             </Button>
           </div>
         </div>
@@ -315,8 +447,10 @@ export default function DashboardPage() {
           {filteredTracks.map((track) => (
             <Card
               key={track.id}
-              className={`backdrop-blur-lg bg-[#1a1a1a] border border-[#333] shadow-lg rounded-lg hover:bg-[#333] transition-colors cursor-pointer w-full overflow-x-hidden flex items-center ${
-                selectedTracks.has(track.id) ? "ring-2 ring-[#1DB954]" : ""
+              className={`backdrop-blur-lg bg-black/40 border border-white/20 shadow-lg rounded-2xl hover:bg-white/10 transition-colors cursor-pointer w-full overflow-x-hidden flex items-center ${
+                selectedTracks.has(track.id)
+                  ? "ring-2 ring-[#1DB954] bg-[#1DB954]/30"
+                  : ""
               }`}
               onClick={() => toggleTrackSelection(track.id)}
             >
@@ -354,6 +488,41 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+      {/* Filters Modal */}
+      <Dialog open={showFilters} onOpenChange={setShowFilters}>
+        <DialogContent className="max-w-md w-full bg-black/80 border border-white/20 backdrop-blur-lg rounded-2xl">
+          <DialogTitle className="text-white text-2xl mb-4">
+            Filter by Mood
+          </DialogTitle>
+          <div className="grid grid-cols-2 gap-4">
+            {MOODS.map((mood) => (
+              <Button
+                key={mood.key}
+                onClick={() => {
+                  setSelectedMood(mood.key);
+                  setShowFilters(false);
+                }}
+                className={`rounded-full px-4 py-2 font-bold ${
+                  selectedMood === mood.key
+                    ? "bg-[#1DB954] text-black"
+                    : "bg-white/10 text-white"
+                }`}
+              >
+                {mood.label}
+              </Button>
+            ))}
+          </div>
+          <Button
+            onClick={() => {
+              setSelectedMood(null);
+              setShowFilters(false);
+            }}
+            className="mt-6 w-full rounded-full bg-white/10 text-white font-bold"
+          >
+            Clear Filter
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
