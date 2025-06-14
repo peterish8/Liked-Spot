@@ -203,66 +203,18 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#121212] flex items-center justify-center">
-        <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-10 text-center">
+        <div className="backdrop-blur-lg bg-[#1a1a1a] border border-[#333] rounded-2xl shadow-2xl p-10 text-center">
           <div className="w-8 h-8 border-4 border-[#1DB954] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg text-white/90">Loading your liked songs...</p>
+          <p className="text-lg text-[#b3b3b3]">Loading your liked songs...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative flex flex-col bg-transparent text-white overflow-x-hidden">
-      {/* Neon Animated Background */}
-      <div className="fixed inset-0 -z-10">
-        <svg
-          className="w-full h-full"
-          viewBox="0 0 800 800"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <radialGradient id="neon1" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#1DB954" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#191414" stopOpacity="0" />
-            </radialGradient>
-            <radialGradient id="neon2" cx="80%" cy="20%" r="60%">
-              <stop offset="0%" stopColor="#ff0057" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#191414" stopOpacity="0" />
-            </radialGradient>
-            <radialGradient id="neon3" cx="20%" cy="80%" r="60%">
-              <stop offset="0%" stopColor="#00cfff" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#191414" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          <circle cx="400" cy="400" r="350" fill="url(#neon1)">
-            <animate
-              attributeName="r"
-              values="350;370;350"
-              dur="6s"
-              repeatCount="indefinite"
-            />
-          </circle>
-          <circle cx="650" cy="150" r="200" fill="url(#neon2)">
-            <animate
-              attributeName="r"
-              values="200;220;200"
-              dur="8s"
-              repeatCount="indefinite"
-            />
-          </circle>
-          <circle cx="200" cy="650" r="180" fill="url(#neon3)">
-            <animate
-              attributeName="r"
-              values="180;200;180"
-              dur="7s"
-              repeatCount="indefinite"
-            />
-          </circle>
-        </svg>
-      </div>
+    <div className="min-h-screen relative flex flex-col bg-[#121212] text-white overflow-x-hidden">
       {/* Header with Spotify Logo */}
-      <header className="flex items-center justify-between px-4 sm:px-8 py-6 border-b border-white/10 backdrop-blur-md bg-white/5">
+      <header className="flex items-center justify-between px-4 sm:px-8 py-6 border-b border-[#333] backdrop-blur-md bg-[#1a1a1a]">
         <div className="flex items-center space-x-3">
           <svg
             className="h-8 w-8 text-[#1DB954] drop-shadow-lg"
@@ -288,9 +240,9 @@ export default function DashboardPage() {
       </header>
       <main className="container mx-auto px-2 sm:px-4 py-10 w-full overflow-x-hidden">
         <div className="flex flex-row gap-4 mb-8">
-          <Card className="flex-1 backdrop-blur-lg bg-black/40 border border-white/20 shadow-xl rounded-2xl">
+          <Card className="flex-1 backdrop-blur-lg bg-[#1a1a1a] border border-[#333] shadow-xl rounded-2xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/90 uppercase">
+              <CardTitle className="text-sm font-medium text-[#b3b3b3] uppercase">
                 Total Liked Songs
               </CardTitle>
             </CardHeader>
@@ -300,9 +252,9 @@ export default function DashboardPage() {
               </span>
             </CardContent>
           </Card>
-          <Card className="flex-1 backdrop-blur-lg bg-black/40 border border-white/20 shadow-xl rounded-2xl">
+          <Card className="flex-1 backdrop-blur-lg bg-[#1a1a1a] border border-[#333] shadow-xl rounded-2xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/90 uppercase">
+              <CardTitle className="text-sm font-medium text-[#b3b3b3] uppercase">
                 Filtered Songs
               </CardTitle>
             </CardHeader>
@@ -312,9 +264,9 @@ export default function DashboardPage() {
               </span>
             </CardContent>
           </Card>
-          <Card className="flex-1 backdrop-blur-lg bg-black/40 border border-white/20 shadow-xl rounded-2xl">
+          <Card className="flex-1 backdrop-blur-lg bg-[#1a1a1a] border border-[#333] shadow-xl rounded-2xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/90 uppercase">
+              <CardTitle className="text-sm font-medium text-[#b3b3b3] uppercase">
                 Selected Songs
               </CardTitle>
             </CardHeader>
@@ -329,30 +281,30 @@ export default function DashboardPage() {
           <div className="flex-1 w-full">
             <div className="relative">
               <Input
-                className="w-full px-6 py-3 rounded-lg bg-black/40 text-white placeholder:text-white/60 border border-white/20 shadow-lg backdrop-blur-md focus:ring-2 focus:ring-[#1DB954] focus:border-[#1DB954] transition-all"
+                className="w-full px-6 py-3 rounded-lg bg-[#1a1a1a] text-white placeholder:text-[#b3b3b3] border border-[#333] shadow-lg backdrop-blur-md focus:ring-2 focus:ring-[#1DB954] focus:border-[#1DB954] transition-all"
                 placeholder="Search songs, artists, or albums..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b3b3b3]" />
             </div>
           </div>
           <div className="flex gap-4 mt-4 md:mt-0">
             <Button
               onClick={selectAllFiltered}
-              className="backdrop-blur-lg bg-black/40 border border-white/20 text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-[#1DB954]/20 transition-all text-sm"
+              className="backdrop-blur-lg bg-[#1a1a1a] border border-[#333] text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-[#1DB954]/20 transition-all text-sm"
             >
               <Plus className="mr-2 h-4 w-4" /> Select All
             </Button>
             <Button
               onClick={clearSelection}
-              className="backdrop-blur-lg bg-black/40 border border-white/20 text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-pink-600/20 transition-all text-sm"
+              className="backdrop-blur-lg bg-[#1a1a1a] border border-[#333] text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-[#333] transition-all text-sm"
             >
               Clear Selection
             </Button>
             <Button
               onClick={() => setShowFilters((v) => !v)}
-              className="backdrop-blur-lg bg-black/40 border border-white/20 text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-cyan-600/20 transition-all text-sm"
+              className="backdrop-blur-lg bg-[#1a1a1a] border border-[#333] text-white font-medium px-5 py-2 rounded-lg shadow-xl hover:bg-[#333] transition-all text-sm"
             >
               Filters
             </Button>
@@ -363,7 +315,7 @@ export default function DashboardPage() {
           {filteredTracks.map((track) => (
             <Card
               key={track.id}
-              className={`backdrop-blur-lg bg-black/40 border border-white/20 shadow-lg rounded-lg hover:bg-white/10 transition-colors cursor-pointer w-full overflow-x-hidden flex items-center ${
+              className={`backdrop-blur-lg bg-[#1a1a1a] border border-[#333] shadow-lg rounded-lg hover:bg-[#333] transition-colors cursor-pointer w-full overflow-x-hidden flex items-center ${
                 selectedTracks.has(track.id) ? "ring-2 ring-[#1DB954]" : ""
               }`}
               onClick={() => toggleTrackSelection(track.id)}
@@ -382,11 +334,11 @@ export default function DashboardPage() {
                   <div className="font-medium text-base truncate text-white">
                     {track.name}
                   </div>
-                  <div className="text-gray-300 truncate text-sm">
+                  <div className="text-[#b3b3b3] truncate text-sm">
                     {track.artists.map((a) => a.name).join(", ")}
                   </div>
                 </div>
-                <div className="text-gray-400 text-sm min-w-fit ml-2">
+                <div className="text-[#b3b3b3] text-sm min-w-fit ml-2">
                   {new Date(track.added_at).toLocaleDateString()}
                 </div>
               </CardContent>
@@ -395,8 +347,8 @@ export default function DashboardPage() {
         </div>
         {filteredTracks.length === 0 && (
           <div className="text-center py-12">
-            <Headphones className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">
+            <Headphones className="h-12 w-12 text-[#b3b3b3] mx-auto mb-4" />
+            <p className="text-[#b3b3b3]">
               No songs found matching your search.
             </p>
           </div>
